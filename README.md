@@ -8,6 +8,28 @@
 
 ---
 
+## 本项目与 umi-linux 的关系
+
+本项目的**方案、思路与流程全部来自 [misaka-link/umi-linux](https://github.com/misaka-link/umi-linux)**
+（小米 10 / `umi` 的 Debian 移植项目），我们做的是**移植到 thyme 并补充踩坑记录**：
+
+| 环节 | 来源 |
+|---|---|
+| 保留原厂 `vendor_boot` / `dtbo`、只改 `boot` 分区的思路 | umi-linux |
+| boot 镜像结构（v2 header + 内核 + initramfs + DTB 段） | umi-linux |
+| **headless 设计**（主动给面板断电，不做显示） | umi-linux |
+| **USB NCM + ACM** 双通道（网卡 + 串口 root shell） | umi-linux |
+| rootfs 直接铺满 `userdata` + `resize2fs` | umi-linux |
+| 默认账号 `root` / 密码策略、`armbian` 账号需锁定 | umi-linux 文档 |
+| **thyme 的设备树、DTB symbols、v2 打包参数、25 条踩坑** | 本项目新增 |
+
+> 如果你在 `umi`（小米 10）上操作，**请直接使用上游项目**，它的发布包更完整（含内核、rootfs、GPU/WiFi 已调通）。
+> 本项目面向 **`thyme`（小米 10S）**，并且**不附带**任何内核/rootfs 二进制。
+
+上游项目：<https://github.com/misaka-link/umi-linux>
+
+---
+
 ## 能力矩阵
 
 | 能力 | 状态 | 说明 |

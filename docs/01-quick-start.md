@@ -1,6 +1,10 @@
 # 01 · 快速开始：从 Android 到 Debian
 
 > 预计耗时：刷机 20 分钟（不含下载）。破坏性：**userdata 会被清空**。
+>
+> 本流程改编自 **[umi-linux](https://github.com/misaka-link/umi-linux)**（小米 10 的 Debian 移植项目）：
+> 「刷 boot → 写 rootfs 到 userdata → 首启加固」这三步的先后顺序与设计（含 headless、USB NCM+ACM、
+> 保留原厂 vendor_boot/dtbo）都来自该项目，本项目只是把设备相关的部分换成了 thyme。
 
 ## 0. 确认三件事
 

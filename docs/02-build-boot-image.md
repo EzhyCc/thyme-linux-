@@ -1,5 +1,9 @@
 # 02 · 构建 boot 镜像
 
+> 本节的构建参数（v2 header、`page_size=4096`、`dtb_addr=0x1F00000`、ramdisk 地址等）
+> 沿用 **[umi-linux](https://github.com/misaka-link/umi-linux)** 的 `boot-build/` 结论；
+> 本项目补充的是 **thyme 的 DTB（含 `__symbols__`）** 与对应的打包脚本。
+
 本机 ABL 的硬性要求（缺一不可）：
 
 1. **boot header v2**（不是 v3）

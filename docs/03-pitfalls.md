@@ -2,6 +2,10 @@
 
 按阶段分组。每条都注明**现象 → 根因 → 解法**，按此顺序可以直接复用。
 
+> 说明：其中一部分坑（vendor_boot 校验、dtbo overlay、headless、USB gadget）在
+> **[umi-linux](https://github.com/misaka-link/umi-linux)** 项目里同样存在；
+> 本项目是在 `thyme` 上重跑一遍并补齐了设备差异（DTB symbols、UFS 容量、WiFi 型号、被墙环境）。
+
 ---
 
 ## A. 引导链（ABL）
