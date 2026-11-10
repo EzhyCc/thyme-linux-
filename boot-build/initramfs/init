@@ -1,0 +1,87 @@
+#!/bin/sh
+# thyme initramfs init
+#   1) 基础挂载（任一失败 → 救援 shell）
+#   2) 建 USB gadget（ACM + NCM，最后一次写 UDC）
+#   3) 等 rootfs 设备（最多 30s）
+#   4) mount 后建目录 → mount --move → switch_root
+#   5) 任何环节失败 → 救援 shell（ttyGS0 优先）
+/bin/busybox --install -s
+export PATH=/bin:/sbin
+
+ROOTDEV=${ROOTDEV:-/dev/sda35}
+
+fail() { echo "[initramfs] $1" > /dev/kmsg 2>/dev/null; }
+
+mount -t devtmpfs devtmpfs /dev 2>/dev/null || { fail "devtmpfs mount failed"; exec sh; }
+mount -t proc     proc     /proc 2>/dev/null || { fail "proc mount failed"; exec sh; }
+mount -t sysfs    sysfs    /sys  2>/dev/null || { fail "sysfs mount failed"; exec sh; }
+mount -t tmpfs    tmpfs    /run  2>/dev/null || { fail "tmpfs /run mount failed"; exec sh; }
+mkdir -p /root /sys/kernel/config
+mount -t configfs none /sys/kernel/config 2>/dev/null || fail "configfs mount failed"
+
+setup_gadget() {
+	G=/sys/kernel/config/usb_gadget/g1
+	mkdir -p "$G" 2>/dev/null || return 1
+	echo 0x18d1 > "$G/idVendor" 2>/dev/null
+	echo 0x4ee8 > "$G/idProduct" 2>/dev/null
+	mkdir -p "$G/strings/0x409" "$G/configs/c.1/strings/0x409"
+	echo "thyme"        > "$G/strings/0x409/manufacturer" 2>/dev/null
+	echo "thyme-linux"  > "$G/strings/0x409/product" 2>/dev/null
+	echo "0001"         > "$G/strings/0x409/serialnumber" 2>/dev/null
+	echo "ACM+NCM"      > "$G/configs/c.1/strings/0x409/configuration" 2>/dev/null
+	mkdir -p "$G/functions/acm.gs0" "$G/functions/ncm.usb0" 2>/dev/null || return 1
+	echo 02:11:22:33:44:55 > "$G/functions/ncm.usb0/dev_addr" 2>/dev/null || true
+	echo 66:55:44:33:22:11 > "$G/functions/ncm.usb0/host_addr" 2>/dev/null || true
+	ln -sf "$G/functions/acm.gs0" "$G/configs/c.1/" 2>/dev/null || return 1
+	ln -sf "$G/functions/ncm.usb0" "$G/configs/c.1/" 2>/dev/null || true
+	set -- /sys/class/udc/*
+	UDC=""
+	[ -e "$1" ] && UDC=${1##*/}
+	[ -n "$UDC" ] || return 1
+	echo "$UDC" > "$G/UDC" 2>/dev/null || return 1
+	i=0
+	while [ ! -c /dev/ttyGS0 ] && [ $i -lt 10 ]; do sleep 1; i=$((i+1)); done
+	[ -c /dev/ttyGS0 ] || return 1
+	echo "[initramfs] gadget bound: UDC=$UDC ttyGS0 ok" > /dev/kmsg 2>/dev/null
+	return 0
+}
+
+if setup_gadget; then
+	ifconfig usb0 172.16.42.1 netmask 255.255.0.0 up 2>/dev/null || true
+else
+	fail "gadget setup failed"
+fi
+
+i=0
+while [ ! -b "$ROOTDEV" ] && [ $i -lt 30 ]; do i=$((i+1)); sleep 1; done
+fail "wait ${ROOTDEV}: ${i}s"
+
+mkdir -p /root
+if ! mount -t ext4 -o rw "$ROOTDEV" /root 2>/dev/null; then
+	fail "mount ${ROOTDEV} failed; rescue"
+elif [ ! -x /root/sbin/init ] && [ ! -x /root/lib/systemd/systemd ]; then
+	fail "no init in rootfs; rescue"
+else
+	# 关键：必须在 mount 之后再建这些挂载点
+	mkdir -p /root/dev /root/proc /root/sys /root/run
+	ok=1
+	mount --move /dev  /root/dev  2>/dev/null || ok=0
+	mount --move /proc /root/proc 2>/dev/null || ok=0
+	mount --move /sys  /root/sys  2>/dev/null || ok=0
+	mount --move /run  /root/run  2>/dev/null || ok=0
+	if [ $ok -eq 1 ]; then
+		fail "switching root"
+		exec switch_root /root /sbin/init
+	else
+		fail "mount --move failed; rescue"
+	fi
+fi
+
+# 救援 shell：单通道，优先 ttyGS0（USB 串口）
+if [ -c /dev/ttyGS0 ]; then
+	exec sh </dev/ttyGS0 >/dev/ttyGS0 2>&1
+elif [ -c /dev/ttyMSM0 ]; then
+	exec sh </dev/ttyMSM0 >/dev/ttyMSM0 2>&1
+else
+	exec sh </dev/console >/dev/console 2>&1
+fi

@@ -1,0 +1,33 @@
+# 二进制与产物
+*.img
+*.img.gz
+*.cpio
+*.cpio.gz
+*.dtb
+*.dtbo
+*.deb
+*.tar.gz
+*.tar.zst
+out/
+build/
+tmp/
+temp/
+
+# 内核/rootfs（体积大，不入库）
+kernel/
+rootfs/*.tar*
+dts/*.dtb
+
+# 敏感信息
+*.key
+*.pem
+secrets*.yaml
+sub.yaml
+*subscription*
+.env
+
+# 系统
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc

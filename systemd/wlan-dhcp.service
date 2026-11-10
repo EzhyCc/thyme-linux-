@@ -1,0 +1,12 @@
+[Unit]
+Description=WLAN DHCP client (thyme-linux)
+After=wpa_supplicant@wlp1s0.service network.target
+Wants=wpa_supplicant@wlp1s0.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/dhcp-client.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
